@@ -75,6 +75,8 @@ nouns = [
     "yelling",
 ]
 
+NB_CITIZENS = 5
+
 
 class HarmonyWatcher:
     def __init__(self, id):
@@ -108,5 +110,15 @@ class HarmonyWatcher:
     def update_citizens(self):
         self.citizens = []
 
-        for i in range(random.randint(0, 5)):
+        for i in range(random.randint(0, NB_CITIZENS)):
             self.citizens.append(self.create_citizen())
+
+    def create_word(self):
+        word = random.choice(pronouns) + random.choice(verbs) + random.choice(nouns)
+        return word
+
+    def update_words(self):
+        self.words = []
+
+        for i in range(random.randint(0, NB_CITIZENS)):
+            self.words.append(self.create_word())
