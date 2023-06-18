@@ -1,5 +1,6 @@
 import random
 import time
+import uuid
 
 pronouns = [
     "We",
@@ -79,9 +80,9 @@ NB_CITIZENS = 5
 
 
 class HarmonyWatcher:
-    def __init__(self, id):
-        self.id = id
-        self.position = [0.0, 0.0, 0.0]
+    def __init__(self):
+        self.id = uuid.uuid1()
+        self.position = [0.0, 0.0]
         self.citizens = []
         self.words = []
         print("Drone created")
@@ -110,15 +111,31 @@ class HarmonyWatcher:
     def update_citizens(self):
         self.citizens = []
 
-        for i in range(random.randint(0, NB_CITIZENS)):
+        for i in range(random.randint(1, NB_CITIZENS)):
             self.citizens.append(self.create_citizen())
 
     def create_word(self):
-        word = random.choice(pronouns) + random.choice(verbs) + random.choice(nouns)
+        word = (
+            f"{random.choice(pronouns)} {random.choice(verbs)} {random.choice(nouns)}"
+        )
         return word
 
     def update_words(self):
         self.words = []
 
-        for i in range(random.randint(0, NB_CITIZENS)):
+        for i in range(random.randint(1, NB_CITIZENS)):
             self.words.append(self.create_word())
+
+
+def simulate():
+    watcher = HarmonyWatcher()
+
+    watcher.update_position()
+    watcher.update_citizens()
+    watcher.update_words()
+
+    print(watcher.create_report())
+
+
+if __name__ == "__main__":
+    simulate()
