@@ -13,7 +13,7 @@ scalaVersion := "2.13.8"
 
 // It's possible to define many kinds of settings, such as:
 
-name := "hello-world"
+name := "drone"
 organization := "ch.epfl.scala"
 version := "1.0"
 
@@ -26,6 +26,14 @@ version := "1.0"
 // You can define other libraries as dependencies in your build like this:
 
 libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "2.1.1"
+libraryDependencies ++= Seq(
+  "org.apache.kafka" % "kafka-clients" % "2.8.0",
+  "org.apache.kafka" % "kafka-streams" % "2.8.0",
+)
+libraryDependencies += "org.json4s" %% "json4s-jackson" % "3.6.11"
+libraryDependencies += "org.json4s" %% "json4s-core" % "3.7.0-M5"
+libraryDependencies += "io.jvm.uuid" %% "scala-uuid" % "0.3.1"
+
 
 // Here, `libraryDependencies` is a set of dependencies, and by using `+=`,
 // we're adding the scala-parser-combinators dependency to the set of dependencies
