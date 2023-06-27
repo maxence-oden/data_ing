@@ -1,5 +1,17 @@
 import scala.util.Random
-import java.util.UUID
+import io.jvm.uuid._
+
+import java.nio.charset.StandardCharsets
+import java.util.{Map => JMap}
+import org.apache.kafka.common.serialization.{Deserializer, Serde, Serializer}
+import org.apache.kafka.common.serialization.{Serdes => JSerdes}
+import org.json4s._
+import org.json4s.jackson.Serialization
+import org.json4s.jackson.Serialization.write
+
+
+import org.apache.kafka.clients.producer.{KafkaProducer, ProducerRecord}
+import org.apache.kafka.common.serialization.StringSerializer
 
 object HarmonyWatcher {
   val pronouns: Array[String] = Array(
@@ -82,10 +94,10 @@ object HarmonyWatcher {
     "yelling"
   )
 
-  val NB_CITIZENS: Int = 5
+  val NB_CITIZENS: Int = 50
 
   class HarmonyWatcher {
-    val id: UUID = UUID.randomUUID()
+    val id: String = UUID.random.string
     var position: Array[Double] = Array(0.0, 0.0)
     var citizens: List[Map[String, Any]] = List()
     var words: List[String] = List()
@@ -126,18 +138,36 @@ object HarmonyWatcher {
     }
   }
 
-  def simulate(): Unit = {
+  def main(args: Array[String]): Unit = {
+    implicit val formats: Formats = DefaultFormats
+
+    val props = new java.util.Properties()
+    props.put("bootstrap.servers", "localhost:9093")
+    // Create the Kafka producer
+    val producer = new KafkaProducer[String, String](props, new StringSerializer, new StringSerializer)
+
     val watcher = new HarmonyWatcher()
 
-    watcher.updatePosition()
-    watcher.updateCitizens()
-    watcher.updateWords()
+    while (true) {
+      watcher.updatePosition()
+      watcher.updateCitizens()
+      watcher.updateWords()
 
-    println(watcher.createReport())
-  }
+      // Convert the watcher to JSON
+      val report = watcher.createReport()
+      val reportJson = write(report)
 
-  def main(args: Array[String]): Unit = {
-    simulate()
+      println(reportJson)
+
+      // Send the watcher JSON to the 'drone_topic' Kafka topic
+      val record = new ProducerRecord[String, String]("drone_topic", reportJson)
+      producer.send(record)
+
+      val delay = scala.util.Random.nextInt(5 * 60 * 1000 - 1 * 60 * 1000) + 1 * 60 * 1000
+      Thread.sleep(delay)
+    }
+    // Close the Kafka producer
+    producer.close()
   }
 }
 
