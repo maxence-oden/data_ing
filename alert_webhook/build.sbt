@@ -26,6 +26,13 @@ version := "1.0"
 // You can define other libraries as dependencies in your build like this:
 
 libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "2.1.1"
+libraryDependencies += "com.typesafe.akka" %% "akka-http" % "10.2.6"
+libraryDependencies += "org.apache.kafka" % "kafka-clients" % "2.8.0"
+libraryDependencies += "com.softwaremill.sttp.client3" %% "core" % "3.3.15"
+libraryDependencies += "com.softwaremill.sttp.client3" %% "json4s" % "3.8.15"
+libraryDependencies += "org.json4s" %% "json4s-jackson" % "3.6.11"
+libraryDependencies += "org.json4s" %% "json4s-core" % "3.7.0-M5"
+
 
 // Here, `libraryDependencies` is a set of dependencies, and by using `+=`,
 // we're adding the scala-parser-combinators dependency to the set of dependencies
