@@ -3,14 +3,14 @@ import java.util.Arrays
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.common.serialization.StringSerializer
-import org.apache.spark.sql.{SaveMode, SparkSession, Row, SQLContext}
+import org.apache.spark.sql.{Row, SQLContext, SaveMode, SparkSession}
 import org.apache.spark.sql.types.{StringType, StructField, StructType}
 import org.apache.spark.SparkContext
 import org.apache.spark.sql.types._
 import org.apache.spark.streaming._
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.kafka.clients.consumer.KafkaConsumer
-
+import org.apache.spark
 object Main {
   val ACCESS_KEY = sys.env.get("ACCESS_KEY")
   val SECRET_KEY = sys.env.get("SECRET_KEY")
@@ -20,9 +20,12 @@ object Main {
   def main(args: Array[String]): Unit = {
     val spark = SparkSession
       .builder()
-      .appName("Spark SQL basic example")
-      .config("spark.some.config.option", "some-value")
+      .appName("MyAppS3Storing")
+      .master("local[*]")
       .getOrCreate()
+    import spark.implicits._
+    //val conf = SparkConf().setAppName("projectName").setMaster("local[*]")
+    //val sc = SparkContext.getOrCreate(conf)
     println("Enternig begin of program")
     println("ACCESS_KEY:", ACCESS_KEY)
     println("SECRET_KEY:", SECRET_KEY)
@@ -81,6 +84,7 @@ object Main {
       //        .csv(RAW_PATH)
 
       // Get value from topic and print the data
+      println(records)
       records.forEach { record =>
         val key = record.key()
         val value = record.value()
@@ -94,7 +98,11 @@ object Main {
           .add("timestamp", StringType)
           .add("current location", ArrayType(IntegerType))
 
-        val df = spark.createDataFrame(data, schema)
+        val rdd = spark.sparkContext.parallelize(data)
+        val df = spark.createDataFrame(rdd, schema)
+        df.write.csv(path=RAW_PATH)
+        //val df = spark.createDataFrame(data, schema)
+        //val df = spark.createDataFrame(data)
 
         //        val df = spark.createDataFrame(spark.sparkContext.parallelize(data), schema)
         //        df.printSchema()
