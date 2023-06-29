@@ -19,9 +19,7 @@ object Main {
       .appName("MyAppAlarm")
       .master("local[*]")
       .getOrCreate()
-    import spark.implicits._
-    //val conf = SparkConf().setAppName("projectName").setMaster("local[*]")
-    //val sc = SparkContext.getOrCreate(conf)
+    
     println("Enternig begin of program")
 
     // zone geographic, datalake timestamp
@@ -40,61 +38,68 @@ object Main {
     consumer.subscribe(Arrays.asList("drone_topic")) // Replace "topic_name" with your Kafka topic(s)
     println("Consumer subscribed.")
 
-    while (true) {
-      val records = consumer.poll(100);
+    loop(consumer, spark)
+  }
+  def loop(consumer: KafkaConsumer[String, String], spark: SparkSession): Unit =
+  {
+    import spark.implicits._
+    val records = consumer.poll(100);
 
-      // Get information concerning the topic
-      records.partitions().forEach { topicPartition =>
-        val topic = topicPartition.topic()
-        val partition = topicPartition.partition()
-        // Process topic and partition as needed
-        println(s"Topic: $topic, Partition: $partition")
-      }
+    // Get information concerning the topic
+    records.partitions().forEach { topicPartition =>
+      val topic = topicPartition.topic()
+      val partition = topicPartition.partition()
+      // Process topic and partition as needed
+      println(s"Topic: $topic, Partition: $partition")
+    }
 
-      val schema = new StructType()
-        .add("id", StringType)
-        .add("citizens", ArrayType(StringType))
-        .add("words", ArrayType(StringType))
-        .add("timestamp", StringType)
-        .add("current location", ArrayType(IntegerType))
+    val schema = new StructType()
+      .add("id", StringType)
+      .add("citizens", ArrayType(StringType))
+      .add("words", ArrayType(StringType))
+      .add("timestamp", StringType)
+      .add("current location", ArrayType(IntegerType))
 
-      val propsProducer = new Properties()
-      propsProducer.put("bootstrap.servers", "localhost:9093")
-      propsProducer.put("key.serializer", classOf[StringSerializer].getName)
-      propsProducer.put("value.serializer", classOf[StringSerializer].getName)
-      val producer = new KafkaProducer[String, String](propsProducer)
+    val propsProducer = new Properties()
+    propsProducer.put("bootstrap.servers", "localhost:9093")
+    propsProducer.put("key.serializer", classOf[StringSerializer].getName)
+    propsProducer.put("value.serializer", classOf[StringSerializer].getName)
+    val producer = new KafkaProducer[String, String](propsProducer)
 
-      // Get value from topic and print the data
-      // println(records)
-      records.forEach { record =>
-        println(record.value())
-        val key = record.key()
-        val value = record.value()
-        println(s"Received message: key = $key, value = $value")
+    // Get value from topic and print the data
+    // println(records)
+    records.forEach { record =>
+      println(record.value())
+      val key = record.key()
+      val value = record.value()
+      println(s"Received message: key = $key, value = $value")
 
-        val data = Seq(Row(value))
-        val rdd = spark.sparkContext.parallelize(data)
-        val df = spark.createDataFrame(rdd, schema)
+      val data = Seq(Row(value))
+      val rdd = spark.sparkContext.parallelize(data)
+      val df = spark.createDataFrame(rdd, schema)
 
-        //val json = parse(record.value())
-        val jsondf = spark.read.json(Seq(record.value()).toDS)
-        val location = jsondf.select("current location").collect()(0)(0).asInstanceOf[Seq[Long]]
-        // Foreach citizen, send a message to the topic "alarm_topic"
-        jsondf.select("citizens").collect().foreach { citizens =>
-          // ex: citizen = {"name":"Jesus","harmonyscore":39}
-          citizens(0).asInstanceOf[Seq[Row]].foreach { citizen =>
-            val citizenName = citizen(1).asInstanceOf[String]
-            val citizenHarmonyScore = citizen(0).asInstanceOf[Long]
-            if (citizenHarmonyScore <= 10) {
-              val citizenMessage = s"""{"name": "$citizenName", "location": $location}"""
-              println(citizenMessage)
-              val record = new ProducerRecord[String, String]("alert_topic", citizenName, citizenMessage)
-              producer.send(record)
-            }
+      //val json = parse(record.value())
+      val jsondf = spark.read.json(Seq(record.value()).toDS)
+      val location = jsondf.select("current location").collect()(0)(0).asInstanceOf[Seq[Long]]
+      // format location to be a string "[x, y]"
+      val locationString = s"[${location(0)}, ${location(1)}]"
+      // Foreach citizen, send a message to the topic "alarm_topic"
+      jsondf.select("citizens").collect().foreach { citizens =>
+        // ex: citizen = {"name":"Jesus","harmonyscore":39}
+        citizens(0).asInstanceOf[Seq[Row]].foreach { citizen =>
+          val citizenName = citizen(1).asInstanceOf[String]
+          val citizenHarmonyScore = citizen(0).asInstanceOf[Long]
+          if (citizenHarmonyScore <= 10) {
+            val citizenMessage = s"""{"name": "$citizenName", "location": $locationString}"""
+            println(citizenMessage)
+            val record = new ProducerRecord[String, String]("alert_topic", citizenName, citizenMessage)
+            producer.send(record)
           }
         }
       }
-      producer.close()
     }
+    producer.close()
+
+    loop(consumer, spark)
   }
 }
