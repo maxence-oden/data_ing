@@ -11,5 +11,5 @@ libraryDependencies ++= Seq(
   "org.apache.spark" % "spark-mllib_2.12" % "3.0.1",
   "org.jmockit" % "jmockit" % "1.34" % "test",
   // "org.apache.spark" % "spark-streaming-kafka" % "3.0.1"
-  "org.apache.kafka" % "kafka-clients" % "2.8.1"
+  "org.apache.kafka" % "kafka-clients" % "2.8.1",
 )
