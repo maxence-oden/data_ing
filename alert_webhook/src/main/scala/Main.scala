@@ -21,18 +21,21 @@ object KafkaConsumer {
 
     consumer.subscribe(List("alert_topic").asJava)
 
-    while (true) {
-      val records = consumer.poll(java.time.Duration.ofSeconds(1))
-      println("Fetching")
-
-      records.iterator().asScala.foreach { record =>
-        val message = record.value()
-        // Call your function to send a POST request to Discord webhook with the message
-        sendDiscordWebhook(message)
-      }
-    }
+    loop(consumer)
 
     consumer.close()
+  }
+
+  def loop(consumer: KafkaConsumer[String, String]): Unit = {
+    val records = consumer.poll(java.time.Duration.ofSeconds(1))
+
+    records.iterator().asScala.foreach { record =>
+      val message = record.value()
+      // Call your function to send a POST request to Discord webhook with the message
+      sendDiscordWebhook(message)
+    }
+
+    loop(consumer)
   }
 
   def sendDiscordWebhook(message: String): Unit = {
