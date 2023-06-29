@@ -139,7 +139,6 @@ object HarmonyWatcher {
   }
 
   def main(args: Array[String]): Unit = {
-    implicit val formats: Formats = DefaultFormats
 
     val props = new java.util.Properties()
     props.put("bootstrap.servers", "localhost:9093")
@@ -148,26 +147,31 @@ object HarmonyWatcher {
 
     val watcher = new HarmonyWatcher()
 
-    while (true) {
-      watcher.updatePosition()
-      watcher.updateCitizens()
-      watcher.updateWords()
+    loop(watcher, producer)
 
-      // Convert the watcher to JSON
-      val report = watcher.createReport()
-      val reportJson = write(report)
-
-      println(reportJson)
-
-      // Send the watcher JSON to the 'drone_topic' Kafka topic
-      val record = new ProducerRecord[String, String]("drone_topic", reportJson)
-      producer.send(record)
-
-      val delay = scala.util.Random.nextInt(5 * 60 * 1000 - 1 * 60 * 1000) + 1 * 60 * 1000
-      Thread.sleep(delay)
-    }
     // Close the Kafka producer
     producer.close()
+  }
+
+  def loop(watcher: HarmonyWatcher, producer: KafkaProducer[String, String]): Unit = {
+    implicit val formats: Formats = DefaultFormats
+    
+    watcher.updatePosition()
+    watcher.updateCitizens()
+    watcher.updateWords()
+
+    // Convert the watcher to JSON
+    val report = watcher.createReport()
+    val reportJson = write(report)
+
+    println(reportJson)
+
+    // Send the watcher JSON to the 'drone_topic' Kafka topic
+    val record = new ProducerRecord[String, String]("drone_topic", reportJson)
+    producer.send(record)
+
+    val delay = scala.util.Random.nextInt(5 * 60 * 1000 - 1 * 60 * 1000) + 1 * 60 * 1000
+    Thread.sleep(delay)
   }
 }
 
