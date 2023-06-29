@@ -8,9 +8,11 @@ import org.apache.spark.sql.types.{StringType, StructField, StructType}
 import org.apache.spark.SparkContext
 import org.apache.spark.sql.types._
 import org.apache.spark.streaming._
+import org.apache.spark.sql.functions._
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.spark
+import org.apache.spark.sql.functions.explode
 object Main {
   val ACCESS_KEY = sys.env.get("ACCESS_KEY")
   val SECRET_KEY = sys.env.get("SECRET_KEY")
@@ -18,17 +20,17 @@ object Main {
   val RAW_PATH = "s3a://" + BUCKET_NAME + "/raw_data" // Folder to write input data
 
   def main(args: Array[String]): Unit = {
+    println("Enternig begin of program")
+    println("ACCESS_KEY:", ACCESS_KEY)
+    println("SECRET_KEY:", SECRET_KEY)
+
     val spark = SparkSession
       .builder()
       .appName("MyAppS3Storing")
       .master("local[*]")
       .getOrCreate()
-    import spark.implicits._
     //val conf = SparkConf().setAppName("projectName").setMaster("local[*]")
     //val sc = SparkContext.getOrCreate(conf)
-    println("Enternig begin of program")
-    println("ACCESS_KEY:", ACCESS_KEY)
-    println("SECRET_KEY:", SECRET_KEY)
 
     // zone geographic, datalake timestamp
     val propsConsumer : Properties = new Properties()
@@ -84,23 +86,47 @@ object Main {
       //        .csv(RAW_PATH)
 
       // Get value from topic and print the data
-      println(records)
+//      println(records)
       records.forEach { record =>
         val key = record.key()
         val value = record.value()
         println(s"Received message: key = $key, value = $value")
 
-        val data = Seq(Row(value))
-        val schema = new StructType()
-          .add("id", StringType)
-          .add("citizens", ArrayType(StringType))
-          .add("words", ArrayType(StringType))
-          .add("timestamp", StringType)
-          .add("current location", ArrayType(IntegerType))
+//        val data = Seq(Row(value))
+//        println(data)
+//        val schema = new StructType()
+//          .add("id", StringType)
+//          .add("citizens", AnyType)
+//          .add("words", StringType)
+//          .add("timestamp", LongType)
+//          .add("current location", IntegerType)
 
-        val rdd = spark.sparkContext.parallelize(data)
-        val df = spark.createDataFrame(rdd, schema)
-        df.write.csv(path=RAW_PATH)
+//        val rdd = spark.sparkContext.parallelize(data)
+//        val df = spark.createDataFrame(rdd, schema)
+        import spark.implicits._
+        val df = spark.read.json(Seq(value).toDS())
+
+        // Flatten the citizens array column
+        val flattenedDF = df.withColumn("citizen", explode($"citizens"))
+          .select($"id", $"timestamp", $"current location", $"words",
+            $"citizen.name".as("citizen_name"), $"citizen.harmonyscore")
+
+
+        // Convert the current location array to string
+//        val stringifyCitizens = udf((arr: Seq[Row]) => arr.map(row => s"${row.getString(0)}:${row.getLong(1)}").mkString(","))
+//
+//        val finalDF = flattenedDF.withColumn("citizens_str", stringifyCitizens($"citizen"))
+//          .drop("citizens", "citizen")
+
+        // Extract id and timestamp from the input value
+        val id = flattenedDF.select("id").first().getString(0)
+        val timestamp = flattenedDF.select("timestamp").first().getLong(0)
+
+        // Generate the file path based on id and timestamp
+        val filePath = s"$RAW_PATH/$id/$timestamp.json"
+
+        // Write the final DataFrame to the specified CSV file
+        flattenedDF.write.json(filePath)
         //val df = spark.createDataFrame(data, schema)
         //val df = spark.createDataFrame(data)
 
