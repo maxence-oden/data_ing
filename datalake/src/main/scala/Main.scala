@@ -33,7 +33,7 @@ object Main {
     //val sc = SparkContext.getOrCreate(conf)
 
     // zone geographic, datalake timestamp
-    val propsConsumer : Properties = new Properties()
+    val propsConsumer: Properties = new Properties()
     propsConsumer.put("bootstrap.servers", "localhost:9093")
     propsConsumer.put("key.deserializer", classOf[StringDeserializer].getName)
     propsConsumer.put("value.deserializer", classOf[StringDeserializer].getName)
@@ -65,7 +65,7 @@ object Main {
     //      .getOrCreate()
     //    println("SparkSession created")
 
-    while (true) {
+    def loop() {
       val records = consumer.poll(100);
 
       // Get information concerning the topic
@@ -86,23 +86,23 @@ object Main {
       //        .csv(RAW_PATH)
 
       // Get value from topic and print the data
-//      println(records)
+      //      println(records)
       records.forEach { record =>
         val key = record.key()
         val value = record.value()
         println(s"Received message: key = $key, value = $value")
 
-//        val data = Seq(Row(value))
-//        println(data)
-//        val schema = new StructType()
-//          .add("id", StringType)
-//          .add("citizens", AnyType)
-//          .add("words", StringType)
-//          .add("timestamp", LongType)
-//          .add("current location", IntegerType)
+        //        val data = Seq(Row(value))
+        //        println(data)
+        //        val schema = new StructType()
+        //          .add("id", StringType)
+        //          .add("citizens", AnyType)
+        //          .add("words", StringType)
+        //          .add("timestamp", LongType)
+        //          .add("current location", IntegerType)
 
-//        val rdd = spark.sparkContext.parallelize(data)
-//        val df = spark.createDataFrame(rdd, schema)
+        //        val rdd = spark.sparkContext.parallelize(data)
+        //        val df = spark.createDataFrame(rdd, schema)
         import spark.implicits._
         val df = spark.read.json(Seq(value).toDS())
 
@@ -113,10 +113,10 @@ object Main {
 
 
         // Convert the current location array to string
-//        val stringifyCitizens = udf((arr: Seq[Row]) => arr.map(row => s"${row.getString(0)}:${row.getLong(1)}").mkString(","))
-//
-//        val finalDF = flattenedDF.withColumn("citizens_str", stringifyCitizens($"citizen"))
-//          .drop("citizens", "citizen")
+        //        val stringifyCitizens = udf((arr: Seq[Row]) => arr.map(row => s"${row.getString(0)}:${row.getLong(1)}").mkString(","))
+        //
+        //        val finalDF = flattenedDF.withColumn("citizens_str", stringifyCitizens($"citizen"))
+        //          .drop("citizens", "citizen")
 
         // Extract id and timestamp from the input value
         val id = flattenedDF.select("id").first().getString(0)
@@ -145,6 +145,8 @@ object Main {
         //          .option("header", "true")
         //          .csv(RAW_PATH)
       }
+      loop();
     }
+    loop();
   }
-}
+  }
