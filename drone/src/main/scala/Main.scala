@@ -8,7 +8,8 @@ import org.apache.kafka.common.serialization.{Serdes => JSerdes}
 import org.json4s._
 import org.json4s.jackson.Serialization
 import org.json4s.jackson.Serialization.write
-
+import java.text.SimpleDateFormat
+import java.util.Date
 
 import org.apache.kafka.clients.producer.{KafkaProducer, ProducerRecord}
 import org.apache.kafka.common.serialization.StringSerializer
@@ -105,12 +106,14 @@ object HarmonyWatcher {
     println("Drone created")
 
     def createReport(): Map[String, Any] = {
+      val dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+      val timestamp = dateFormat.format(new Date())
       Map(
         "id" -> id,
         "current location" -> position,
         "citizens" -> citizens,
         "words" -> words,
-        "timestamp" -> System.currentTimeMillis() / 1000L
+        "timestamp" -> timestamp
       )
     }
 
@@ -172,6 +175,7 @@ object HarmonyWatcher {
 
     val delay = scala.util.Random.nextInt(5 * 60 * 1000 - 1 * 60 * 1000) + 1 * 60 * 1000
     Thread.sleep(delay)
+    loop(watcher, producer)
   }
 }
 
