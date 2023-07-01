@@ -35,7 +35,7 @@ object Main {
     val consumer: KafkaConsumer[String, String] = new KafkaConsumer[String, String](propsConsumer)
     println("Consumer created.")
 
-    consumer.subscribe(Arrays.asList("drone_topic")) // Replace "topic_name" with your Kafka topic(s)
+    consumer.subscribe(Arrays.asList("drone_topic"))
     println("Consumer subscribed.")
 
     loop(consumer, spark)
